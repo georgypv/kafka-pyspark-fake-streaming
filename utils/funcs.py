@@ -22,7 +22,7 @@ def write_to_mysql(df, epoch_id, url=URL, dbtable=DBTABLE, user=USER, password=P
         .write.format('jdbc')\
         .option('url', url)\
         .option('dbtable', dbtable)\
-        .option('driver', 'com.mysql.jdbc.Driver')\
+        .option('driver', 'com.mysql.cj.jdbc.Driver')\
         .option('user', user)\
         .option('password', password)\
         .mode('append')\
