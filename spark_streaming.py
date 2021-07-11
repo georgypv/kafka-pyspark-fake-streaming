@@ -10,23 +10,25 @@ os.environ['SPARK_HOME'] = cfg['spark']['spark_home']
 os.environ['PYSPARK_SUBMIT_ARGS'] = cfg['spark']['pyspark_submit_args']
 
 from pyspark.sql import SparkSession
-
 from utils import funcs
 
 JAVA_HOME = cfg['spark']['java_home']
-
 KAFKA_HOST = cfg['kafka']['kafka_host']
 KAFKA_TOPIC = cfg['kafka']['topic_name']
 KAFKA_STARTING_OFFSET = cfg['kafka']['starting_offset']
 
-print('Starting a Spark Session')
-spark = SparkSession \
-    .builder \
-    .master('local') \
-    .appName('Fake Stream')\
-    .config('spark.executorEnv.JAVA_HOME', JAVA_HOME)\
-    .getOrCreate()
-print('Spark Session is initiated')
+try:
+    print('Starting a Spark Session')
+    spark = SparkSession \
+        .builder \
+        .master('local') \
+        .appName('Fake Stream')\
+        .config('spark.executorEnv.JAVA_HOME', JAVA_HOME)\
+        .getOrCreate()
+    print('Spark Session is initiated')
+except Exception as ex:
+    print(str(ex))
+    print('Exception while starting a Spark Session')
 
 print('Loading a Kafka stream')
 msgs = spark.readStream \
@@ -41,7 +43,6 @@ print('Kafka Stream is loaded')
 cafe_info = funcs.df_preprocess(msgs)
 
 try:
-
     print('Starting to write an output stream')
     query = cafe_info \
         .writeStream \
@@ -49,7 +50,7 @@ try:
         .foreachBatch(funcs.write_to_mysql) \
         .trigger(processingTime='5 seconds') \
         .start()
-    query.awaitTermination()
+    query.awaitTermination(timeout=30)
     print(f'Writing stream is running: {query.isActive}')
 
 except KeyboardInterrupt:
