@@ -7,12 +7,12 @@ mysql:
 spark:
       spark_home: 'C:\Users\Georgy\spark\spark-3.1.1-bin-hadoop2.7'
       pyspark_submit_args: "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1 --master local[3] pyspark-shell"
-      java_home: 'C:\Program Files\Java\jdk1.8.0_202\bin'
+      java_home: 'C:\Program Files\Java\jdk1.8.0_202'
 
 kafka:
       kafka_host: "localhost:9092"
       topic_name: "fake-stream-1"
-      starting_offset: "earliest"
+      starting_offset: "latest"
 
 faker:
       max_dishes_num: 3

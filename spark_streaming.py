@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 import os
 import yaml
 
-with open('config.yml', 'r') as ymlfile:
-    cfg = yaml.load(ymlfile)
+with open('config.yml', 'r', encoding='utf-8') as ymlfile:
+    cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 print(cfg)
 
@@ -10,6 +11,7 @@ os.environ['SPARK_HOME'] = cfg['spark']['spark_home']
 os.environ['PYSPARK_SUBMIT_ARGS'] = cfg['spark']['pyspark_submit_args']
 
 from pyspark.sql import SparkSession
+
 from utils import funcs
 
 JAVA_HOME = cfg['spark']['java_home']
@@ -19,8 +21,8 @@ KAFKA_STARTING_OFFSET = cfg['kafka']['starting_offset']
 
 try:
     print('Starting a Spark Session')
-    spark = SparkSession \
-        .builder \
+    spark = SparkSession\
+        .builder\
         .master('local') \
         .appName('Fake Stream')\
         .config('spark.executorEnv.JAVA_HOME', JAVA_HOME)\
@@ -28,7 +30,7 @@ try:
     print('Spark Session is initiated')
 except Exception as ex:
     print(str(ex))
-    print('Exception while starting a Spark Session')
+    print('Exeption while starting a Spark Session')
 
 print('Loading a Kafka stream')
 msgs = spark.readStream \
@@ -48,10 +50,9 @@ try:
         .writeStream \
         .queryName('Fake-Stream') \
         .foreachBatch(funcs.write_to_mysql) \
-        .trigger(processingTime='5 seconds') \
         .start()
-    query.awaitTermination(timeout=30)
     print(f'Writing stream is running: {query.isActive}')
+    query.awaitTermination()
 
 except KeyboardInterrupt:
     print('Keyboard Interrupt: closing writing stream and stopping Spark Session')

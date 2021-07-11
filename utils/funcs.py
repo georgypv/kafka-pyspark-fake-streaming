@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import random
 import yaml
 import time
@@ -6,10 +7,11 @@ from uuid import uuid4
 from faker.providers import BaseProvider
 
 from pyspark.sql.types import *
+
 from pyspark.sql import functions as f
 
-with open('config.yml', 'r') as ymlfile:
-    cfg = yaml.load(ymlfile)
+with open('config.yml', 'r', encoding='utf-8') as ymlfile:
+    cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 URL = cfg['mysql']['url']
 DBTABLE = cfg['mysql']['dbtable']

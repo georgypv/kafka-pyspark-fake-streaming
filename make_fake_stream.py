@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 import json
 import yaml
 import sys
 
-with open('config.yml', 'r') as ymlfile:
-    cfg = yaml.load(ymlfile)
+with open('config.yml', 'r', encoding='utf-8') as ymlfile:
+    cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 from kafka import KafkaProducer
 from faker import Faker
