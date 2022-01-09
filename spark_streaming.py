@@ -7,8 +7,8 @@ import yaml
 
 with open('config.yml', 'r', encoding='utf-8') as ymlfile:
     cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
-
 print(cfg)
+
 SPARK_HOME = cfg['spark']['spark_home']
 PYSPARK_SUBMIT_ARGS = cfg['spark']['pyspark_submit_args']
 JAVA_HOME = cfg['spark']['java_home']
@@ -30,8 +30,6 @@ from pyspark.sql import functions as f
 from utils import funcs
 
 
-
-
 # preprocess kafka mesage in PySpark
 def df_preprocess(df):
     json_schema = StructType([
@@ -44,7 +42,7 @@ def df_preprocess(df):
         StructField('cc_expire', StringType()),
         StructField('book_category', ArrayType(StringType())),
         StructField('book_format', ArrayType(StringType())),
-        StructField('book_rating', ArrayType(IntegerType())),
+        StructField('book_rating', ArrayType(StringType())),
     ])
 
     df_preprocessed = df.select(df.value.cast("string").alias('info_json'), df.offset, df.timestamp) \
@@ -52,8 +50,7 @@ def df_preprocess(df):
         .select('parsed_json.*', 'offset', 'timestamp') \
         .withColumn('book_category', f.array_join(f.col('book_category'), '|')) \
         .withColumn('book_format', f.array_join(f.col('book_format'), '|')) \
-        .withColumn('book_rating', df.book_rating.cast('array<string>')) \
-        .withColumn('book_raing', f.array_join(f.col('book_rating'), '|')) \
+        .withColumn('book_rating', f.array_join(f.col('book_rating'), '|')) \
         .withColumnRenamed('offset', 'kafka_offset') \
         .withColumnRenamed('timestamp', 'kafka_timestamp')
 
@@ -67,6 +64,7 @@ try:
         .master('local') \
         .appName('Fake Orders Stream')\
         .config('spark.executorEnv.JAVA_HOME', JAVA_HOME)\
+        .config('spark.sql.streaming.forceDeleteTempCheckpointLocation', 'true')\
         .getOrCreate()
     print('Spark Session is initiated')
 except Exception as ex:
