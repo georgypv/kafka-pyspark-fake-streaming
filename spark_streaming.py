@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
+from builtins import Exception, KeyboardInterrupt
+
 import yaml
 
 with open('config.yml', 'r', encoding='utf-8') as ymlfile:
@@ -11,6 +13,8 @@ os.environ['SPARK_HOME'] = cfg['spark']['spark_home']
 os.environ['PYSPARK_SUBMIT_ARGS'] = cfg['spark']['pyspark_submit_args']
 
 from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+from pyspark.sql import functions as f
 
 from utils import funcs
 
@@ -18,6 +22,35 @@ JAVA_HOME = cfg['spark']['java_home']
 KAFKA_HOST = cfg['kafka']['kafka_host']
 KAFKA_TOPIC = cfg['kafka']['topic_name']
 KAFKA_STARTING_OFFSET = cfg['kafka']['starting_offset']
+
+
+# preprocess kafka mesage in PySpark
+def df_preprocess(df):
+    json_schema = StructType([
+        StructField('order_uuid', StringType()),
+        StructField('first_name', StringType()),
+        StructField('last_name', StringType()),
+        StructField('address', StringType()),
+        StructField('phone_number', StringType()),
+        StructField('cc_number', StringType()),
+        StructField('cc_expire', StringType()),
+        StructField('book_category', ArrayType(StringType())),
+        StructField('book_format', ArrayType(StringType())),
+        StructField('book_rating', ArrayType(IntegerType())),
+    ])
+
+    df_preprocessed = df.select(df.value.cast("string").alias('info_json'), df.offset, df.timestamp) \
+        .withColumn('parsed_json', f.from_json('info_json', json_schema)) \
+        .select('parsed_json.*', 'offset', 'timestamp') \
+        .withColumn('book_category', f.array_join(f.col('book_category'), '|')) \
+        .withColumn('book_format', f.array_join(f.col('book_format'), '|')) \
+        .withColumn('book_rating', df.book_rating.cast('array<string>')) \
+        .withColumn('book_raing', f.array_join(f.col('book_rating'), '|')) \
+        .withColumnRenamed('offset', 'kafka_offset') \
+        .withColumnRenamed('timestamp', 'kafka_timestamp')
+
+    return df_preprocessed
+
 
 try:
     print('Starting a Spark Session')
@@ -32,6 +65,7 @@ except Exception as ex:
     print(str(ex))
     print('Exeption while starting a Spark Session')
 
+
 print('Loading a Kafka stream')
 msgs = spark.readStream \
     .format('kafka') \
@@ -42,11 +76,10 @@ msgs = spark.readStream \
 print('Kafka Stream is loaded')
 
 
-cafe_info = funcs.df_preprocess(msgs)
-
+order_info = df_preprocess(msgs)
 try:
-    print('Starting to write an output stream')
-    query = cafe_info \
+    print('Starting to write output stream')
+    query = order_info \
         .writeStream \
         .queryName('Fake-Stream') \
         .foreachBatch(funcs.write_to_mysql) \
@@ -55,7 +88,7 @@ try:
     query.awaitTermination()
 
 except KeyboardInterrupt:
-    print('Keyboard Interrupt: closing writing stream and stopping Spark Session')
+    print('Keyboard Interrupt: stopping stream and Spark Session')
     query.stop()
     spark.stop()
 
