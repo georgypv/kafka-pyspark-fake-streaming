@@ -4,7 +4,6 @@ use sandbox;
 create user 'pyspark_user' identified by '123';
 grant all privileges on sandbox.* to 'pyspark_user';
 
-drop table if exists book_orders;
 create table book_orders (
 order_uuid varchar(100),
 first_name varchar(100),
@@ -21,6 +20,7 @@ kafka_timestamp timestamp,
 batch_id integer,
 
 primary key (order_uuid),
-index cafe_idx (cafe_name)
+index category_idx (book_category),
+index format_idx (book_format)
 )
 ;

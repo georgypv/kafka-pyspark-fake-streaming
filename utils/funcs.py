@@ -20,9 +20,9 @@ PSWRD = cfg['mysql']['password']
 def get_order(fake, max_books_in_order=10):
     num_books= random.randint(1,max_books_in_order)
 
-    book_categories = [fake.book_category() for  _ in num_books]
-    book_formats = [fake.book_format() for _ in num_books]
-    book_ratings = [fake.book_rating() for _ in num_books]
+    book_categories = [fake.book_category() for  _ in range(num_books)]
+    book_formats = [fake.book_format() for _ in range(num_books)]
+    book_ratings = [fake.book_rating() for _ in range(num_books)]
 
     assert len(book_categories) == len(book_formats) == len(book_ratings)
 
