@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
 from builtins import Exception, KeyboardInterrupt
 
 import yaml
@@ -8,9 +9,19 @@ with open('config.yml', 'r', encoding='utf-8') as ymlfile:
     cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 print(cfg)
+SPARK_HOME = cfg['spark']['spark_home']
+PYSPARK_SUBMIT_ARGS = cfg['spark']['pyspark_submit_args']
+JAVA_HOME = cfg['spark']['java_home']
+KAFKA_HOST = cfg['kafka']['kafka_host']
+KAFKA_TOPIC = cfg['kafka']['topic_name']
+KAFKA_STARTING_OFFSET = cfg['kafka']['starting_offset']
 
-os.environ['SPARK_HOME'] = cfg['spark']['spark_home']
-os.environ['PYSPARK_SUBMIT_ARGS'] = cfg['spark']['pyspark_submit_args']
+os.environ['SPARK_HOME'] = SPARK_HOME
+os.environ['PYSPARK_SUBMIT_ARGS'] = PYSPARK_SUBMIT_ARGS
+os.environ['JAVA_HOME'] = JAVA_HOME
+sys.path.insert(1, os.path.join(SPARK_HOME, 'python'))
+sys.path.insert(1, os.path.join(SPARK_HOME, 'python', 'pyspark'))
+sys.path.insert(1, os.path.join(SPARK_HOME, 'python', 'build'))
 
 from pyspark.sql import SparkSession
 from pyspark.sql.types import *
@@ -18,10 +29,7 @@ from pyspark.sql import functions as f
 
 from utils import funcs
 
-JAVA_HOME = cfg['spark']['java_home']
-KAFKA_HOST = cfg['kafka']['kafka_host']
-KAFKA_TOPIC = cfg['kafka']['topic_name']
-KAFKA_STARTING_OFFSET = cfg['kafka']['starting_offset']
+
 
 
 # preprocess kafka mesage in PySpark
@@ -57,7 +65,7 @@ try:
     spark = SparkSession\
         .builder\
         .master('local') \
-        .appName('Fake Stream')\
+        .appName('Fake Orders Stream')\
         .config('spark.executorEnv.JAVA_HOME', JAVA_HOME)\
         .getOrCreate()
     print('Spark Session is initiated')
