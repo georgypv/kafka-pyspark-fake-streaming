@@ -4,6 +4,7 @@ use sandbox;
 create user 'pyspark_user' identified by '123';
 grant all privileges on sandbox.* to 'pyspark_user';
 
+drop table if exists book_orders;
 create table book_orders (
 order_uuid varchar(100),
 first_name varchar(100),
