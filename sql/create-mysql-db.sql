@@ -25,3 +25,11 @@ index category_idx (book_category),
 index format_idx (book_format)
 )
 ;
+
+drop table if exists book_orders_agg;
+create table book_orders_agg (
+time_window varchar(100)  null,
+order_cnt integer null,
+batch_id integer not null
+)
+;
