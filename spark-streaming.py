@@ -16,6 +16,8 @@ KAFKA_HOST = cfg['kafka']['kafka_host']
 KAFKA_TOPIC = cfg['kafka']['topic_name']
 KAFKA_STARTING_OFFSET = cfg['kafka']['starting_offset']
 
+DBTABLE_AGG = cfg['mysql']['dbtable_agg']
+
 os.environ['SPARK_HOME'] = SPARK_HOME
 os.environ['PYSPARK_SUBMIT_ARGS'] = PYSPARK_SUBMIT_ARGS
 os.environ['JAVA_HOME'] = JAVA_HOME
@@ -27,7 +29,10 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import *
 from pyspark.sql import functions as f
 
+from functools import partial
 from utils import funcs
+
+write_to_mysql_agg = partial(funcs.write_to_mysql, dbtable=DBTABLE_AGG)
 
 
 # preprocess kafka mesage in PySpark
@@ -65,8 +70,10 @@ try:
         .appName('Fake Orders Stream')\
         .config('spark.executorEnv.JAVA_HOME', JAVA_HOME)\
         .config('spark.sql.streaming.forceDeleteTempCheckpointLocation', 'true')\
+        .config('spark.sql.shuffle.partitions', 4)\
         .getOrCreate()
     print('Spark Session is initiated')
+    print("SPARK UI URL:", spark.sparkContext.uiWebUrl)
 except Exception as ex:
     print(str(ex))
     print('Exeption while starting a Spark Session')
@@ -83,6 +90,7 @@ print('Kafka Stream is loaded')
 
 
 order_info = df_preprocess(msgs)
+
 try:
     print('Starting to write output stream')
     query = order_info \
@@ -91,11 +99,32 @@ try:
         .foreachBatch(funcs.write_to_mysql) \
         .start()
     print(f'Writing stream is running: {query.isActive}')
+
+    query_agg = order_info\
+        .withWatermark('kafka_timestamp', '2 minutes')\
+        .groupBy(f.window('kafka_timestamp', '1 minute').alias('minute_window'))\
+        .agg(f.count('order_uuid').alias('order_cnt'))\
+        .select(
+            f.concat(
+                f.col('minute_window')['start'].cast('string'),
+                f.lit('<->'),
+                f.col('minute_window')['end'].cast('string')
+                ).alias('time_window'),
+                'order_cnt')\
+        .writeStream\
+        .queryName('Fake-Stream-Time-Windows')\
+        .foreachBatch(write_to_mysql_agg)\
+        .start()
+
+    print(f'Writing aggregates is running: {query_agg.isActive}')
+
     query.awaitTermination()
+    query_agg.awaitTermination()
 
 except KeyboardInterrupt:
     print('Keyboard Interrupt: stopping stream and Spark Session')
     query.stop()
+    query_agg.stop()
     spark.stop()
 
 

@@ -3,6 +3,7 @@ mysql:
       user: "pyspark_user"
       password: "123"
       dbtable: "book_orders"
+      dbtable_agg: "book_orders_agg"
 
 spark:
       spark_home: 'C:\Users\Georgy\spark\spark-3.1.1-bin-hadoop2.7'

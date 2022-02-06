@@ -11,6 +11,7 @@ with open('config.yml', 'r', encoding='utf-8') as ymlfile:
 
 URL = cfg['mysql']['url']
 DBTABLE = cfg['mysql']['dbtable']
+DBTABLE_AGG = cfg['mysql']['dbtable_agg']
 USER = cfg['mysql']['user']
 PSWRD = cfg['mysql']['password']
 
@@ -47,7 +48,7 @@ def run_fake_stream(producer, fake, N, topic_name, verbose=False):
         if verbose:
             print(msg)
         sleep_time = random.random()
-        time.sleep(sleep_time*0.01)
+        time.sleep(sleep_time*0.1)
 
         producer.send(topic_name, value=msg)
 
@@ -68,3 +69,4 @@ def write_to_mysql(df, epoch_id, url=URL, dbtable=DBTABLE, user=USER, password=P
         .option('password', password)\
         .mode('append')\
         .save()
+
